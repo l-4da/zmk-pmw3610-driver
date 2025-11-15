@@ -565,7 +565,7 @@ static void activate_automouse_layer() {
 
 static void deactivate_automouse_layer(struct k_timer *timer) {
     automouse_triggered = false;
-    zmk_keymap_layer_deactivate(AUTOMOUSE_LAYER);
+    zmk_keymap_layer_activate(AUTOMOUSE_LAYER, true);
 }
 
 K_TIMER_DEFINE(automouse_layer_timer, deactivate_automouse_layer, NULL);

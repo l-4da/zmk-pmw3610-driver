@@ -6,6 +6,44 @@
 
 #define DT_DRV_COMPAT pixart_pmw3610
 
+#define AUTO_MOUSE_LAYER_KEEP_TIME 30000  // 30秒
+#define AUTO_MOUSE_CLICK_MIN_MS 100
+#define AUTO_MOUSE_CLICK_MAX_MS 1000
+#define AML_ACTIVATE_THRESHOLD CONFIG_PMW3610_MOVEMENT_THRESHOLD
+
+#if AUTOMOUSE_LAYER > 0
+struct k_timer automouse_layer_timer;
+static bool automouse_triggered = false;
+static bool automouse_click_pending = false;
+
+// タイマー終了時にレイヤーを解除
+static void deactivate_automouse_layer(struct k_timer *timer) {
+    automouse_triggered = false;
+    automouse_click_pending = false;
+    zmk_keymap_layer_deactivate(AUTOMOUSE_LAYER);
+}
+
+// Auto Mouse Layer をアクティブ化
+static void activate_automouse_layer(void) {
+    if (!automouse_triggered) {
+        automouse_triggered = true;
+        zmk_keymap_layer_activate(AUTOMOUSE_LAYER, true);
+    }
+    // タイマーを常にリセット
+    k_timer_start(&automouse_layer_timer, K_MSEC(AUTO_MOUSE_LAYER_KEEP_TIME), K_NO_WAIT);
+}
+
+// マウスクリック時にレイヤー解除用タイマーセット
+static void on_mouse_click(void) {
+    automouse_click_pending = true;
+    int timeout_ms = AUTO_MOUSE_CLICK_MIN_MS + (k_uptime_get_32() % (AUTO_MOUSE_CLICK_MAX_MS - AUTO_MOUSE_CLICK_MIN_MS));
+    k_timer_start(&automouse_layer_timer, K_MSEC(timeout_ms), K_NO_WAIT);
+}
+
+K_TIMER_DEFINE(automouse_layer_timer, deactivate_automouse_layer, NULL);
+#endif
+
+
 // 12-bit two's complement value to int16_t
 // adapted from https://stackoverflow.com/questions/70802306/convert-a-12-bit-signed-number-in-c
 #define TOINT16(val, bits) (((struct { int16_t value : bits; }){val}).value)
